@@ -41,12 +41,70 @@ struct MemoryGame<CardContent> where CardContent: Equatable {
             cards.append(Card(content: content, id: pairIndex*2))
             cards.append(Card(content: content, id: pairIndex*2+1))
         }
+        cards.shuffle()
     }
     
     struct Card: Identifiable {
-        var isFaceUp: Bool = false
-        var isMatched: Bool = false
+        var isFaceUp: Bool = false {
+            didSet {
+                if isFaceUp {
+                    startUsingBonnusTime()
+                } else {
+                    stopUsingBonnusTime()
+                }
+            }
+        }
+        var isMatched: Bool = false {
+            didSet {
+                stopUsingBonnusTime()
+            }
+        }
         var content: CardContent
         var id: Int
+
+
+
+
+        var bonusTimeLimit: TimeInterval = 6
+        
+        private var faceUpTime: TimeInterval {
+            if let lastFaceUpDate = lastFaceUpDate {
+                return pastFaceUpTime + Date().timeIntervalSince(lastFaceUpDate)
+            } else {
+                return pastFaceUpTime
+            }
+        }
+        
+        var lastFaceUpDate: Date?
+        
+        var pastFaceUpTime: TimeInterval = 0
+        
+        var bonnusTimeRemaning: Double {
+            max(0, bonusTimeLimit - faceUpTime)
+        }
+        
+        var bonnusRemaning: Double {
+            (bonusTimeLimit > 0 && bonnusTimeRemaning > 0) ? bonnusTimeRemaning/bonusTimeLimit : 0
+        }
+        
+        var hasEarnedBonus: Bool {
+            isMatched && bonnusTimeRemaning > 0
+        }
+
+        var isConsummingBonnusTime: Bool {
+            isFaceUp && !isMatched && bonnusTimeRemaning > 0
+        }
+
+        private mutating func startUsingBonnusTime() {
+            if isConsummingBonnusTime, lastFaceUpDate == nil {
+                lastFaceUpDate = Date()
+            }
+        }
+        
+        private mutating func stopUsingBonnusTime() {
+            pastFaceUpTime = faceUpTime
+            lastFaceUpDate = nil
+            
+        }
     }
 }
